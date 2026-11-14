@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STR, LANGS, pickLang } from './i18n.js?v=6';
+import { STR, LANGS, pickLang } from './i18n.js?v=7';
 
 const $ = s => document.querySelector(s);
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -257,6 +257,11 @@ $('#debates').addEventListener('click', e => { if (!e.target.matches('[data-next
 
 // ───────────── library ─────────────
 $('#books').innerHTML = books.map((b, i) => ({ b, i })).sort((x, y) => x.b.year - y.b.year).map(({ b }) => `<div class="book" style="--c:${trads[b.trad].color}"><i></i><div class="t"><b>${esc(b.work)}</b> · ${esc(b.author)}<small>${year(b.year)} · ${esc(place(b.place))} · ${esc(tradName(b.trad))}${b.tr ? ` · ${esc(T.translated_by)} ${esc(b.tr)}` : ''}</small></div><a class="n" href="https://www.gutenberg.org/ebooks/${b.pg}" target="_blank" rel="noopener">${b.n} ${esc(T.passages)}</a></div>`).join('');
+
+fetch('https://thelongconversation.goatcounter.com/counter/TOTAL.json')
+  .then(r => r.ok ? r.json() : null)
+  .then(d => { if (d && d.count_unique) $('.foot').textContent += ` · ${T.visitors}: ${d.count_unique}`; })
+  .catch(() => {});
 
 // ───────────── the 3D map ─────────────
 const canvas = $('#sky');
