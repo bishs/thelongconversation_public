@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STR, LANGS, pickLang } from './i18n.js?v=7';
+import { STR, LANGS, pickLang } from './i18n.js?v=8';
 
 const $ = s => document.querySelector(s);
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -29,7 +29,19 @@ const [corpus, extra, vecBuf, posBuf] = await Promise.all([
 ]);
 const { trads, books, passages: P } = corpus;
 const N = P.length, VEC = new Int8Array(vecBuf), POS = new Float32Array(posBuf), D = VEC.length / N, MODEL = extra.model;
-const tradOf = i => books[P[i][0]].trad, colorOf = i => trads[tradOf(i)].color;
+const ERAS = [
+  { max: -200, color: '#e8a855' },
+  { max: 600, color: '#e86f52' },
+  { max: 1500, color: '#d96ba0' },
+  { max: 1800, color: '#9b7fe6' },
+  { max: 1900, color: '#4fb6c9' },
+  { max: Infinity, color: '#6ee094' },
+];
+const eraOf = i => { const y = books[P[i][0]].year; return ERAS.findIndex(e => y <= e.max); };
+let colorMode = 'trad'; // 'trad' | 'age'
+const tradOf = i => books[P[i][0]].trad;
+const groupOf = i => colorMode === 'age' ? eraOf(i) : tradOf(i);
+const colorOf = i => colorMode === 'age' ? ERAS[eraOf(i)].color : trads[tradOf(i)].color;
 const tradName = t => (T.trads && T.trads[t]) || trads[t].name;
 const place = p => T.places[p] || p;
 $('#eyebrow').textContent = T.eyebrow(N.toLocaleString(lang), books.length);
@@ -334,7 +346,7 @@ controls.touches.ONE = null; // one finger scrolls the page; two fingers turn th
 
 const geo = new THREE.BufferGeometry();
 const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), size = new Float32Array(N), hi = new Float32Array(N), vis = new Float32Array(N).fill(1);
-const tc = trads.map(t => new THREE.Color(t.color));
+const tc = trads.map(t => new THREE.Color(t.color)), ec = ERAS.map(e => new THREE.Color(e.color));
 for (let i = 0; i < N; i++) {
   for (let k = 0; k < 3; k++) pos[i * 3 + k] = POS[i * 3 + k] * SCALE;
   const c = tc[tradOf(i)]; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
@@ -405,11 +417,51 @@ controls.addEventListener('start', () => { controls.autoRotate = false; fly = nu
 
 // legend
 const off = new Set();
-$('#legend').innerHTML = trads.map((t, i) => `<button style="--c:${t.color}" data-t="${i}"><i></i>${esc(tradName(i))}</button>`).join('');
+function syncMapGroups() {
+  for (let i = 0; i < N; i++) {
+    const c = colorMode === 'age' ? ec[eraOf(i)] : tc[tradOf(i)];
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    vis[i] = off.has(groupOf(i)) ? 0 : 1;
+  }
+  geo.attributes.color.needsUpdate = true;
+  geo.attributes.aVis.needsUpdate = true;
+}
+function renderLegend() {
+  const items = colorMode === 'age'
+    ? ERAS.map((e, i) => ({ color: e.color, label: T.eras[i] }))
+    : trads.map((t, i) => ({ color: t.color, label: tradName(i) }));
+  const allOff = off.size >= items.length;
+  $('#legend').innerHTML = `<div class="leg-bar"><div class="leg-mode"><span>${esc(T.color_by)}:</span><button type="button" data-mode="trad" class="${colorMode === 'trad' ? 'on' : ''}">${esc(T.by_trad)}</button><button type="button" data-mode="age" class="${colorMode === 'age' ? 'on' : ''}">${esc(T.by_age)}</button></div><button type="button" class="leg-all" data-all>${esc(allOff ? T.all_on : T.all_off)}</button></div>` +
+    items.map((it, i) => `<button type="button" style="--c:${it.color}" data-t="${i}" class="${off.has(i) ? 'off' : ''}"><i></i>${esc(it.label)}</button>`).join('');
+}
+renderLegend();
 $('#legend').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return; const t = +b.dataset.t;
-  off.has(t) ? off.delete(t) : off.add(t); b.classList.toggle('off');
-  for (let i = 0; i < N; i++) vis[i] = off.has(tradOf(i)) ? 0 : 1; geo.attributes.aVis.needsUpdate = true;
+  const modeBtn = e.target.closest('[data-mode]');
+  if (modeBtn) {
+    if (modeBtn.dataset.mode === colorMode) return;
+    colorMode = modeBtn.dataset.mode;
+    off.clear();
+    renderLegend();
+    syncMapGroups();
+    return;
+  }
+  const allBtn = e.target.closest('[data-all]');
+  if (allBtn) {
+    const count = colorMode === 'age' ? ERAS.length : trads.length;
+    if (off.size >= count) off.clear();
+    else for (let i = 0; i < count; i++) off.add(i);
+    renderLegend();
+    syncMapGroups();
+    return;
+  }
+  const b = e.target.closest('[data-t]'); if (!b) return;
+  const t = +b.dataset.t, count = colorMode === 'age' ? ERAS.length : trads.length;
+  off.has(t) ? off.delete(t) : off.add(t);
+  b.classList.toggle('off', off.has(t));
+  const allEl = $('#legend [data-all]');
+  if (allEl) allEl.textContent = off.size >= count ? T.all_on : T.all_off;
+  for (let i = 0; i < N; i++) vis[i] = off.has(groupOf(i)) ? 0 : 1;
+  geo.attributes.aVis.needsUpdate = true;
 });
 
 // theme labels
@@ -499,7 +551,7 @@ function tick(t) {
     if (i !== hover) {
       hover = i;
       if (i < 0) tip.hidden = true;
-      else { const bk = books[P[i][0]], tx = P[i][2]; tip.hidden = false; tip.style.setProperty('--c', colorOf(i)); tip.innerHTML = `${esc(tx.length > 190 ? tx.slice(0, 180).replace(/\s\S*$/, '') + '…' : tx)}<small>${esc(bk.author)} — ${esc(P[i][1])}</small>`; }
+      else { const bk = books[P[i][0]], tx = P[i][2]; tip.hidden = false; tip.style.setProperty('--c', colorOf(i)); tip.innerHTML = `${esc(tx.length > 190 ? tx.slice(0, 180).replace(/\s\S*$/, '') + '…' : tx)}<small>${esc(bk.author)} — ${esc(P[i][1])} · ${year(bk.year)}</small>`; }
     }
     if (hover >= 0 && snapped && !downAt) {
       snapEl.hidden = false;

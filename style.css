@@ -167,3 +167,11 @@ textarea::placeholder { color: var(--faint); font-style: italic; }
 /* 3D map magnetic snap reticle for glowing network nodes */
 .snap { position: fixed; z-index: 25; width: 28px; height: 28px; border: 1.5px solid var(--c, var(--gold)); border-radius: 50%; box-shadow: 0 0 14px var(--c, var(--gold)), inset 0 0 6px var(--c, var(--gold)); pointer-events: none; transform: translate(-50%, -50%); transition: left 65ms ease-out, top 65ms ease-out; }
 .snap::after { content: ''; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px var(--c, var(--gold)); transform: translate(-50%, -50%); }
+
+/* map legend mode selector and all-on/off toggle */
+.leg-bar { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+.leg-mode { display: inline-flex; align-items: center; gap: 4px; background: #090b12cc; border: 1px solid #ffffff22; border-radius: 999px; padding: 3px 5px 3px 10px; font: 400 11.5px var(--sans); color: var(--faint); }
+.leg-mode button { background: none; border: 0; color: var(--dim); font: 500 11.5px var(--sans); padding: 3px 9px; border-radius: 999px; cursor: pointer; }
+.leg-mode button.on { background: var(--gold); color: #1a1408; font-weight: 600; }
+.legend button.leg-all { border-color: var(--line); color: var(--gold); font-weight: 500; padding: 5px 12px; }
+.legend button.leg-all:hover { border-color: var(--gold); background: #e8b86d1a; }
