@@ -128,3 +128,42 @@ textarea::placeholder { color: var(--faint); font-style: italic; }
 .ex { margin-top: 14px; padding: 12px 14px; border-left: 2px solid var(--gold); background: #ffffff08; border-radius: 0 6px 6px 0; font: 400 12px var(--sans); color: var(--faint); }
 .ex > b { display: block; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
 .ex > p { margin: 8px 0 0; font: 400 15px/1.55 var(--sans); color: var(--ink); }
+
+/* quill translation animation */
+.quill-work { display: inline-flex; align-items: center; gap: 9px; color: var(--gold); }
+.quill-anim { position: relative; display: inline-flex; width: 20px; height: 20px; color: var(--gold); flex: none; }
+.quill-anim svg { width: 20px; height: 20px; overflow: visible; }
+.quill-anim .q-pen { transform-origin: 4px 20px; animation: quillWrite 1.6s ease-in-out infinite; }
+.quill-anim .q-ink { stroke-dasharray: 16; stroke-dashoffset: 16; animation: quillInk 1.6s ease-in-out infinite; opacity: .85; }
+@keyframes quillWrite {
+  0% { transform: translate(0, 0) rotate(-6deg); }
+  20% { transform: translate(3px, -1.5px) rotate(4deg); }
+  40% { transform: translate(6px, 0) rotate(-4deg); }
+  60% { transform: translate(9px, -1.5px) rotate(5deg); }
+  80% { transform: translate(12px, 0) rotate(-3deg); }
+  92% { transform: translate(12px, -3px) rotate(8deg); }
+  100% { transform: translate(0, 0) rotate(-6deg); }
+}
+@keyframes quillInk {
+  0% { stroke-dashoffset: 16; opacity: .3; }
+  80% { stroke-dashoffset: 0; opacity: .95; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quill-anim .q-pen, .quill-anim .q-ink { animation: none; stroke-dashoffset: 0; }
+}
+
+/* collapsible sections and inline panels */
+.sec-bar, .debate-head, .ex-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sec-bar .eyebrow { margin-bottom: 0; }
+.sec-bar { margin-bottom: 14px; }
+.debate-head { margin-bottom: 24px; cursor: pointer; }
+.debate-head h3 { margin: 0; }
+.sec-fold, .ex-fold { background: #ffffff0a; border: 1px solid #ffffff22; color: var(--dim); width: 26px; height: 26px; border-radius: 7px; font: 600 15px/1 var(--sans); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; padding: 0; transition: .15s; }
+.sec-fold:hover, .ex-fold:hover { border-color: var(--gold); color: var(--gold); }
+.ex-fold { width: 22px; height: 22px; font-size: 14px; background: none; border-color: #ffffff18; }
+.acts button.on, .side button.on { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+
+/* 3D map magnetic snap reticle for glowing network nodes */
+.snap { position: fixed; z-index: 25; width: 28px; height: 28px; border: 1.5px solid var(--c, var(--gold)); border-radius: 50%; box-shadow: 0 0 14px var(--c, var(--gold)), inset 0 0 6px var(--c, var(--gold)); pointer-events: none; transform: translate(-50%, -50%); transition: left 65ms ease-out, top 65ms ease-out; }
+.snap::after { content: ''; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px var(--c, var(--gold)); transform: translate(-50%, -50%); }

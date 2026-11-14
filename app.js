@@ -62,6 +62,8 @@ function diverse(idx, k, { perBook = 2, perTrad = 3, skip = () => false } = {}) 
 let modelReady = false, modelFailed = false, started = false, waiting = null, reqId = 0, worker = null;
 const pending = new Map();
 const mb = x => Math.round(x / 1048576);
+const call = msg => new Promise((resolve, reject) => { const id = ++reqId; pending.set(id, { resolve, reject }); getWorker().postMessage({ ...msg, id }); });
+const quillHTML = msg => `<span class="quill-work"><span class="quill-anim" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><g class="q-pen"><path d="M20.2 3.8c-3.6-.5-7.8 1.4-10.6 4.2L5 12.6 3.5 19.5l6.9-1.5 4.6-4.6c2.8-2.8 4.7-7 4.2-10.6Z"/><path d="M19.5 4.5 3.5 20.5"/></g><path class="q-ink" d="M3.5 21.8h15"/></svg></span><span class="quill-msg">${esc(msg)}</span></span>`;
 function getWorker() {
   if (worker) return worker;
   worker = new Worker('worker.js?v=3', { type: 'module' });
@@ -69,14 +71,19 @@ function getWorker() {
   worker.onmessage = e => {
     const m = e.data;
     if (m.type === 'progress') status.textContent = T.s_progress(mb(m.loaded), mb(m.total));
-    else if (m.type === 'trprogress') { if (m.loaded < m.total) status.textContent = T.s_trload(mb(m.loaded), mb(m.total)); }
+    else if (m.type === 'trprogress') {
+      if (m.loaded < m.total) {
+        const txt = T.s_trload(mb(m.loaded), mb(m.total));
+        status.innerHTML = quillHTML(txt);
+        document.querySelectorAll('.quill-msg').forEach(el => { el.textContent = txt; });
+      }
+    }
     else if (m.type === 'ready') { modelReady = true; setReady(); if (waiting) { const w = waiting; waiting = null; ask(w); } }
     else if (m.type === 'error') fail();
     else if (m.type === 'result') { const p = pending.get(m.id); pending.delete(m.id); m.error ? p.reject(m.error) : p.resolve(m.value); }
   };
   return worker;
 }
-const call = msg => new Promise((resolve, reject) => { const id = ++reqId; pending.set(id, { resolve, reject }); getWorker().postMessage({ ...msg, id }); });
 function setReady() { status.textContent = T.s_ready; status.classList.add('ok'); }
 function startModel() {
   if (started) return; started = true;
@@ -116,16 +123,29 @@ async function translate(text, from, to) {
 }
 const trCache = new Map();
 async function translatePassage(i, box) {
-  const quote = box.querySelector('blockquote'), btn = box.querySelector('[data-act="tr"]');
-  if (btn) btn.remove();
+  const quote = box.querySelector('blockquote'), btn = box.querySelector('.acts [data-act="tr"]');
+  const existing = box.querySelector(':scope > .mt');
+  if (existing) {
+    if (existing.dataset.busy) return;
+    if (existing.dataset.fail) existing.remove();
+    else {
+      const show = existing.hidden;
+      existing.hidden = !show;
+      quote.textContent = show ? trCache.get(i) : P[i][2];
+      btn?.classList.toggle('on', show);
+      return;
+    }
+  }
+  btn?.classList.add('on');
   const english = P[i][2];
   quote.style.opacity = 0.45;
-  const note = document.createElement('div'); note.className = 'mt'; note.textContent = T.translating; quote.after(note);
+  const note = document.createElement('div'); note.className = 'mt'; note.dataset.busy = '1'; note.innerHTML = quillHTML(T.translating); quote.after(note);
   try {
     if (!trCache.has(i)) trCache.set(i, await translate(english, 'en', lang));
+    delete note.dataset.busy;
     quote.textContent = trCache.get(i);
-    note.innerHTML = `${esc(books[P[i][0]].tr ? T.mt_note : T.mt_note_en)}<details><summary>${esc(T.original)}</summary><p>${esc(english)}</p></details>`;
-  } catch { note.textContent = T.tr_fail; }
+    note.innerHTML = `<div class="ex-head"><span>${esc(books[P[i][0]].tr ? T.mt_note : T.mt_note_en)}</span><button type="button" class="ex-fold" data-act="tr" aria-label="${esc(T.aria.close)}">−</button></div><details><summary>${esc(T.original)}</summary><p>${esc(english)}</p></details>`;
+  } catch { delete note.dataset.busy; note.dataset.fail = '1'; note.textContent = T.tr_fail; btn?.classList.remove('on'); }
   quote.style.opacity = 1;
   if (modelReady) setReady();
 }
@@ -137,22 +157,36 @@ const exButton = () => `<button data-act="ex">${esc(T.explain)}</button>`;
 let explainData = null;
 const exCache = new Map();
 async function explainPassage(i, box) {
-  const btn = box.querySelector('[data-act="ex"]'); if (btn) btn.remove();
-  const el = document.createElement('div'); el.className = 'ex'; el.textContent = T.ex_loading;
+  const btn = box.querySelector('.acts [data-act="ex"], :scope > [data-act="ex"]');
+  const existing = box.querySelector(':scope > .ex');
+  if (existing) {
+    if (existing.dataset.busy) return;
+    if (existing.dataset.fail) existing.remove();
+    else {
+      existing.hidden = !existing.hidden;
+      btn?.classList.toggle('on', !existing.hidden);
+      return;
+    }
+  }
+  btn?.classList.add('on');
+  const el = document.createElement('div'); el.className = 'ex'; el.dataset.busy = '1'; el.innerHTML = quillHTML(T.ex_loading);
   (box.querySelector(':scope > .note') || box.querySelector('.cite')).after(el);
   let english;
   try {
     explainData ??= fetch('data/explain.json?v=3').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
     english = (await explainData)[i];
   } catch { explainData = null; }
-  if (!english) { el.textContent = T.ex_fail; return; }
-  const show = (text, extra = '') => { el.innerHTML = `<b>${esc(T.ex_label)}</b><p>${esc(text)}</p>${extra}`; };
+  delete el.dataset.busy;
+  if (!english) { el.dataset.fail = '1'; el.textContent = T.ex_fail; btn?.classList.remove('on'); return; }
+  const show = (text, extra = '') => { el.innerHTML = `<div class="ex-head"><b>${esc(T.ex_label)}</b><button type="button" class="ex-fold" data-act="ex" data-i="${i}" aria-label="${esc(T.aria.close)}">−</button></div><p>${esc(text)}</p>${extra}`; };
   if (lang === 'en') { show(english); return; }
-  show(english, `<div class="mt">${esc(T.translating)}</div>`);
+  el.dataset.busy = '1';
+  show(english, `<div class="mt">${quillHTML(T.translating)}</div>`);
   try {
     if (!exCache.has(i)) exCache.set(i, await translate(english, 'en', lang));
+    delete el.dataset.busy;
     show(exCache.get(i), `<div class="mt">${esc(T.ex_mt)}<details><summary>${esc(T.ex_original)}</summary><p>${esc(english)}</p></details></div>`);
-  } catch { show(english); }
+  } catch { delete el.dataset.busy; show(english); }
 }
 
 // ───────────── answers ─────────────
@@ -171,6 +205,9 @@ const CRISIS = /suicid|suizid|selbstmord|kill myself|end my life|want to die|wis
 function showAnswers(text, r, english) {
   current = r;
   $('#answers').hidden = false;
+  $('#answersBody').hidden = false;
+  const fold = document.querySelector('[data-fold="answersBody"]');
+  if (fold) { fold.textContent = '−'; fold.setAttribute('aria-expanded', 'true'); }
   $('#asked').textContent = `“${text}”`;
   $('#crisis').hidden = !CRISIS.test(text + ' ' + (english || ''));
   cardsEl.innerHTML = '';
@@ -199,7 +236,7 @@ async function ask(text) {
   if (modelFailed) return showAnswers(text, keywordRank(text));
   let english = null;
   if (lang !== 'en') {
-    status.classList.remove('ok'); status.textContent = T.s_trq;
+    status.classList.remove('ok'); status.innerHTML = quillHTML(T.s_trq);
     try { english = await translate(text, lang, 'en'); } catch { english = null; }
     setReady();
   }
@@ -216,6 +253,27 @@ $('#examples').addEventListener('click', e => { const b = e.target.closest('butt
 status.textContent = T.s_open;
 
 document.addEventListener('click', e => {
+  const foldBtn = e.target.closest('[data-fold]');
+  if (foldBtn) {
+    const body = document.getElementById(foldBtn.dataset.fold);
+    if (body) {
+      const open = body.hidden;
+      body.hidden = !open;
+      foldBtn.textContent = open ? '−' : '+';
+      foldBtn.setAttribute('aria-expanded', String(open));
+    }
+    return;
+  }
+  const debHead = e.target.closest('[data-fold-debate]');
+  if (debHead) {
+    const sides = debHead.nextElementSibling, btn = debHead.querySelector('.sec-fold');
+    if (sides) {
+      const open = sides.hidden;
+      sides.hidden = !open;
+      if (btn) { btn.textContent = open ? '−' : '+'; btn.setAttribute('aria-expanded', String(open)); }
+    }
+    return;
+  }
   const act = e.target.closest('[data-act]'); const host = e.target.closest('[data-i]');
   if (!host) return; const i = +host.dataset.i;
   if (act && act.dataset.act === 'ex') explainPassage(i, act.closest('.card, .drawer-main, .side'));
@@ -231,10 +289,10 @@ function openDrawer(i) {
   const r = ranked(vecOf(i));
   const echoes = diverse(r.idx, 6, { perBook: 1, perTrad: 2, skip: j => j === i || tradOf(j) === bk.trad || P[j][2].length < 70 });
   $('#drawerBody').innerHTML = `<div class="drawer-main" style="--c:${t.color}" data-i="${i}"><div class="trad">${esc(tradName(bk.trad))} · ${esc(place(bk.place))} · ${year(bk.year)}</div>
-    <blockquote>${esc(trCache.get(i) || text)}</blockquote>
+    <blockquote>${esc(text)}</blockquote>
     <div class="cite"><b>${esc(bk.author)}</b> — ${esc(cite)}</div>
     <div class="note">${bk.tr ? `${esc(T.Translated_by)} ${esc(bk.tr)}. ` : ''}<a href="https://www.gutenberg.org/ebooks/${bk.pg}" target="_blank" rel="noopener">${esc(T.readfull)}</a></div>
-    <div class="acts">${exButton()}${trCache.has(i) ? '' : trButton()}</div></div>
+    <div class="acts">${exButton()}${trButton()}</div></div>
     <h5>${esc(T.echoes)}</h5><p class="note">${esc(T.other_peoples)}</p>
     ${echoes.map(j => { const k = books[P[j][0]], tt = trads[k.trad]; return `<div class="echo" style="--c:${tt.color}" data-i="${j}"><p>${esc(P[j][2].length > 420 ? P[j][2].slice(0, 400).replace(/\s\S*$/, '') + '…' : P[j][2])}</p><small><b>${esc(tradName(k.trad))}</b> · ${esc(k.author)} — ${esc(P[j][1])} · ${year(k.year)}</small></div>`; }).join('')}`;
   drawer.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); drawer.scrollTop = 0;
@@ -247,7 +305,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') $('#closeDrawer').cli
 // ───────────── disagreements ─────────────
 const debTitle = di => (T.debates && T.debates[di][0]) || extra.debates[di].title;
 const sideLabel = (di, si) => (T.debates && T.debates[di][1][si]) || extra.debates[di].sides[si].label;
-$('#debates').innerHTML = extra.debates.map((d, di) => `<div class="debate"><h3>${esc(debTitle(di))}</h3><div class="sides">${d.sides.map((s, si) => sideHTML(di, si, 0)).join('')}</div></div>`).join('');
+$('#debates').innerHTML = extra.debates.map((d, di) => `<div class="debate"><div class="debate-head" data-fold-debate><h3>${esc(debTitle(di))}</h3><button type="button" class="sec-fold" aria-expanded="true" aria-label="${esc(T.aria.close)}">−</button></div><div class="sides">${d.sides.map((s, si) => sideHTML(di, si, 0)).join('')}</div></div>`).join('');
 function sideHTML(di, si, n) {
   const s = extra.debates[di].sides[si], i = s.picks[n % s.picks.length], bk = books[P[i][0]], t = trads[bk.trad];
   return `<div class="side" style="--c:${t.color}" data-d="${di}" data-s="${si}" data-n="${n}"><h4>${esc(sideLabel(di, si))}</h4><div class="who">${esc(bk.author.split(' (')[0])} · ${esc(tradName(bk.trad))}</div>
@@ -311,10 +369,12 @@ scene.add(new THREE.Points(geo, mat));
 // threads between the passages of one answer
 const threadGeo = new THREE.BufferGeometry();
 const threadMat = new THREE.LineBasicMaterial({ color: 0xe8b86d, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthTest: false });
-const threads = new THREE.LineSegments(threadGeo, threadMat); scene.add(threads);
+const threads = new THREE.LineSegments(threadGeo, threadMat);
+threads.frustumCulled = false; // prevent stale empty boundingSphere from culling rotated networks
+scene.add(threads);
 // ring around the selected passage
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.23, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
-ring.visible = false; scene.add(ring);
+ring.visible = false; ring.frustumCulled = false; scene.add(ring);
 
 let dimTarget = 0;
 function highlight(glow, strong) {
@@ -326,6 +386,7 @@ function highlight(glow, strong) {
   for (let a = 1; a < strong.length; a++) { const i = strong[0], j = strong[a]; seg.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2], pos[j * 3], pos[j * 3 + 1], pos[j * 3 + 2]); }
   for (let a = 1; a + 1 < strong.length; a++) { const i = strong[a], j = strong[a + 1]; seg.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2], pos[j * 3], pos[j * 3 + 1], pos[j * 3 + 2]); }
   threadGeo.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+  threadGeo.computeBoundingSphere();
 }
 function clearHighlight() { hi.fill(0); geo.attributes.aHi.needsUpdate = true; dimTarget = 0; threadGeo.setAttribute('position', new THREE.Float32BufferAttribute([], 3)); ring.visible = false; }
 function select(i) { ring.position.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]); ring.visible = true; }
@@ -357,25 +418,42 @@ const labelEls = extra.themes.map((t, i) => { const b = document.createElement('
 const labelPos = extra.themes.map(t => new THREE.Vector3(...t.pos).multiplyScalar(SCALE * 1.12));
 
 // picking
-const tip = $('#tip'); let mouse = null, hover = -1, downAt = null;
+const tip = $('#tip'), snapEl = $('#snap');
+let mouse = null, hover = -1, downAt = null, dragged = false, pickX = 0, pickY = 0, snapped = false;
 const m4 = new THREE.Matrix4();
 function pick(mx, my) {
   m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); const e = m4.elements, w = innerWidth, h = innerHeight;
-  let best = -1, bd = 14 * 14;
+  const net = dimTarget > 0.1;
+  let best = -1, bd = net ? 48 * 48 : 14 * 14, bestTier = 0, bx = mx, by = my;
   for (let i = 0; i < N; i++) {
     if (!vis[i]) continue;
+    const hVal = hi[i];
+    const tier = net ? (hVal > 0.9 ? 2 : hVal > 0 ? 1 : 0) : 0;
+    if (tier < bestTier) continue;
     const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
     const cw = e[3] * x + e[7] * y + e[11] * z + e[15]; if (cw <= 0) continue;
-    const sx = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / cw * 0.5 + 0.5) * w - mx, sy = (0.5 - (e[1] * x + e[5] * y + e[9] * z + e[13]) / cw * 0.5) * h - my;
-    let d = sx * sx + sy * sy; if (hi[i] > 0.9) d *= 0.35;
-    if (d < bd) { bd = d; best = i; }
+    const px = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / cw * 0.5 + 0.5) * w;
+    const py = (0.5 - (e[1] * x + e[5] * y + e[9] * z + e[13]) / cw * 0.5) * h;
+    const sx = px - mx, sy = py - my, d = sx * sx + sy * sy;
+    const maxD = tier === 2 ? 48 * 48 : tier === 1 ? 28 * 28 : 14 * 14;
+    if (d > maxD) continue;
+    if (tier > bestTier || d < bd) { bestTier = tier; bd = d; best = i; bx = px; by = py; }
   }
+  pickX = bx; pickY = by; snapped = best >= 0 && bestTier > 0;
   return best;
 }
-canvas.addEventListener('pointermove', e => { mouse = [e.clientX, e.clientY]; });
-canvas.addEventListener('pointerleave', () => { mouse = null; });
-canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
-canvas.addEventListener('pointerup', e => { if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return; const i = pick(e.clientX, e.clientY); if (i >= 0) { openDrawer(i); flyTo(i); } });
+canvas.addEventListener('pointermove', e => {
+  mouse = [e.clientX, e.clientY];
+  if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) dragged = true;
+});
+canvas.addEventListener('pointerleave', () => { mouse = null; snapped = false; snapEl.hidden = true; tip.hidden = true; hover = -1; });
+canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; dragged = false; snapped = false; snapEl.hidden = true; tip.hidden = true; hover = -1; });
+canvas.addEventListener('pointerup', e => {
+  const wasTap = downAt && !dragged && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) <= 5;
+  downAt = null; dragged = false;
+  if (!wasTap) return;
+  const i = pick(e.clientX, e.clientY); if (i >= 0) { openDrawer(i); flyTo(i); }
+});
 
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); mat.uniforms.uPx.value = innerHeight * 0.17 * renderer.getPixelRatio(); }
 addEventListener('resize', resize); resize();
@@ -415,14 +493,30 @@ function tick(t) {
       el.style.opacity = Math.max(0.35, Math.min(1, 1.7 - c.d / 22));
     }
   }
-  if (frame % 3 === 0) {
-    const i = mouse && inMap ? pick(mouse[0], mouse[1]) : -1;
+  if (dimTarget > 0.1 || frame % 3 === 0) {
+    const i = mouse && inMap && !downAt ? pick(mouse[0], mouse[1]) : -1;
+    if (i < 0) snapped = false;
     if (i !== hover) {
-      hover = i; canvas.style.cursor = i >= 0 ? 'pointer' : 'grab';
+      hover = i;
       if (i < 0) tip.hidden = true;
       else { const bk = books[P[i][0]], tx = P[i][2]; tip.hidden = false; tip.style.setProperty('--c', colorOf(i)); tip.innerHTML = `${esc(tx.length > 190 ? tx.slice(0, 180).replace(/\s\S*$/, '') + '…' : tx)}<small>${esc(bk.author)} — ${esc(P[i][1])}</small>`; }
     }
-    if (hover >= 0 && mouse) { tip.style.left = Math.min(mouse[0] + 18, innerWidth - 360) + 'px'; tip.style.top = Math.min(mouse[1] + 18, innerHeight - 160) + 'px'; }
+    if (hover >= 0 && snapped && !downAt) {
+      snapEl.hidden = false;
+      snapEl.style.setProperty('--c', colorOf(hover));
+      snapEl.style.left = pickX + 'px';
+      snapEl.style.top = pickY + 'px';
+      canvas.style.cursor = 'none';
+      tip.style.left = Math.min(pickX + 18, innerWidth - 360) + 'px';
+      tip.style.top = Math.min(pickY + 18, innerHeight - 160) + 'px';
+    } else {
+      snapEl.hidden = true;
+      canvas.style.cursor = hover >= 0 ? 'pointer' : 'grab';
+      if (hover >= 0 && mouse) {
+        tip.style.left = Math.min(mouse[0] + 18, innerWidth - 360) + 'px';
+        tip.style.top = Math.min(mouse[1] + 18, innerHeight - 160) + 'px';
+      }
+    }
   }
 }
 requestAnimationFrame(tick);

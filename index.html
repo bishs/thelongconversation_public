@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
@@ -43,12 +43,14 @@
 <section id="answers" class="answers" hidden>
   <div class="wrap">
     <div id="crisis" class="crisis" hidden><b data-t="crisis_b"></b> <span data-th="crisis_t"></span></div>
-    <p class="eyebrow" data-t="yousaid"></p>
-    <h2 id="asked"></h2>
-    <p class="how" id="how"></p>
-    <div class="timeline" id="timeline"></div>
-    <div class="cards" id="cards"></div>
-    <div class="more-row"><button id="more" class="ghost" data-t="more"></button><a href="#map" class="ghost" id="seeMap" data-t="seemap"></a></div>
+    <div class="sec-bar"><p class="eyebrow" data-t="yousaid"></p><button type="button" class="sec-fold" data-fold="answersBody" aria-expanded="true" data-a="close">−</button></div>
+    <div id="answersBody">
+      <h2 id="asked"></h2>
+      <p class="how" id="how"></p>
+      <div class="timeline" id="timeline"></div>
+      <div class="cards" id="cards"></div>
+      <div class="more-row"><button id="more" class="ghost" data-t="more"></button><a href="#map" class="ghost" id="seeMap" data-t="seemap"></a></div>
+    </div>
   </div>
 </section>
 
@@ -61,27 +63,32 @@
   <div class="legend" id="legend"></div>
   <div class="zoom"><button id="zin" data-a="zin" aria-label="Zoom in">+</button><button id="zout" data-a="zout" aria-label="Zoom out">−</button><button id="zreset" data-a="zreset" aria-label="Reset the view">⟲</button></div>
   <div class="tip" id="tip" hidden></div>
+  <div class="snap" id="snap" hidden aria-hidden="true"></div>
 </section>
 
 <section id="disagree" class="disagree">
   <div class="wrap">
-    <p class="eyebrow" data-t="dis_eyebrow"></p>
-    <h2 data-t="dis_h"></h2>
-    <p class="sub" data-t="dis_p"></p>
-    <div id="debates"></div>
+    <div class="sec-bar"><p class="eyebrow" data-t="dis_eyebrow"></p><button type="button" class="sec-fold" data-fold="disagreeBody" aria-expanded="true" data-a="close">−</button></div>
+    <div id="disagreeBody">
+      <h2 data-t="dis_h"></h2>
+      <p class="sub" data-t="dis_p"></p>
+      <div id="debates"></div>
+    </div>
   </div>
 </section>
 
 <section id="library" class="library">
   <div class="wrap">
-    <p class="eyebrow" data-t="lib_eyebrow"></p>
-    <h2 data-t="lib_h"></h2>
-    <p class="sub" data-th="lib_p"></p>
-    <div class="table" id="books"></div>
-    <div class="method">
-      <div><h3 data-t="m.0.0"></h3><p data-t="m.0.1"></p></div>
-      <div><h3 data-t="m.1.0"></h3><p data-t="m.1.1"></p></div>
-      <div><h3 data-t="m.2.0"></h3><p data-t="m.2.1"></p></div>
+    <div class="sec-bar"><p class="eyebrow" data-t="lib_eyebrow"></p><button type="button" class="sec-fold" data-fold="libraryBody" aria-expanded="true" data-a="close">−</button></div>
+    <div id="libraryBody">
+      <h2 data-t="lib_h"></h2>
+      <p class="sub" data-th="lib_p"></p>
+      <div class="table" id="books"></div>
+      <div class="method">
+        <div><h3 data-t="m.0.0"></h3><p data-t="m.0.1"></p></div>
+        <div><h3 data-t="m.1.0"></h3><p data-t="m.1.1"></p></div>
+        <div><h3 data-t="m.2.0"></h3><p data-t="m.2.1"></p></div>
+      </div>
     </div>
   </div>
   <footer class="foot" data-t="foot"></footer>
@@ -92,7 +99,7 @@
   <div id="drawerBody"></div>
 </aside>
 
-<script type="module" src="app.js?v=10"></script>
+<script type="module" src="app.js?v=11"></script>
 <script data-goatcounter="https://thelongconversation.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
