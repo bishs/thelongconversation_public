@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Long Conversation</title>
+<meta name="description" content="Bring a trouble. Hear what 2,500 years of human thought said about it, in real words with sources.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=5">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div id="labels" aria-hidden="true"></div>
+
+<nav class="top">
+  <a href="#ask" class="brand">The Long Conversation</a>
+  <div class="links">
+    <a href="#ask" data-t="nav.0">Ask</a><a href="#map" data-t="nav.1">Map</a><a href="#disagree" data-t="nav.2">Disagreements</a><a href="#library" data-t="nav.3">Library</a>
+    <select id="lang" data-a="lang" aria-label="Language"></select>
+  </div>
+</nav>
+
+<header id="ask" class="hero pass">
+  <div class="hero-in">
+    <p class="eyebrow" id="eyebrow">…</p>
+    <h1 id="h1">Somebody has been<br>here <em>before you.</em></h1>
+    <p class="lede" data-t="lede"></p>
+    <form id="form" autocomplete="off">
+      <textarea id="q" rows="2" data-a="q" aria-label="What troubles you?"></textarea>
+      <button type="submit" id="go" data-t="ask">Ask</button>
+    </form>
+    <p class="status" id="status">…</p>
+    <div class="chips" id="examples"></div>
+  </div>
+  <a class="scroll-hint" href="#map" data-t="hint"></a>
+</header>
+
+<section id="answers" class="answers" hidden>
+  <div class="wrap">
+    <div id="crisis" class="crisis" hidden><b data-t="crisis_b"></b> <span data-th="crisis_t"></span></div>
+    <p class="eyebrow" data-t="yousaid"></p>
+    <h2 id="asked"></h2>
+    <p class="how" id="how"></p>
+    <div class="timeline" id="timeline"></div>
+    <div class="cards" id="cards"></div>
+    <div class="more-row"><button id="more" class="ghost" data-t="more"></button><a href="#map" class="ghost" id="seeMap" data-t="seemap"></a></div>
+  </div>
+</section>
+
+<section id="map" class="mapsec pass">
+  <div class="map-head">
+    <p class="eyebrow" data-t="map_eyebrow"></p>
+    <h2 data-t="map_h"></h2>
+    <p data-t="map_p"></p>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="zoom"><button id="zin" data-a="zin" aria-label="Zoom in">+</button><button id="zout" data-a="zout" aria-label="Zoom out">−</button><button id="zreset" data-a="zreset" aria-label="Reset the view">⟲</button></div>
+  <div class="tip" id="tip" hidden></div>
+</section>
+
+<section id="disagree" class="disagree">
+  <div class="wrap">
+    <p class="eyebrow" data-t="dis_eyebrow"></p>
+    <h2 data-t="dis_h"></h2>
+    <p class="sub" data-t="dis_p"></p>
+    <div id="debates"></div>
+  </div>
+</section>
+
+<section id="library" class="library">
+  <div class="wrap">
+    <p class="eyebrow" data-t="lib_eyebrow"></p>
+    <h2 data-t="lib_h"></h2>
+    <p class="sub" data-th="lib_p"></p>
+    <div class="table" id="books"></div>
+    <div class="method">
+      <div><h3 data-t="m.0.0"></h3><p data-t="m.0.1"></p></div>
+      <div><h3 data-t="m.1.0"></h3><p data-t="m.1.1"></p></div>
+      <div><h3 data-t="m.2.0"></h3><p data-t="m.2.1"></p></div>
+    </div>
+  </div>
+  <footer class="foot" data-t="foot"></footer>
+</section>
+
+<aside id="drawer" class="drawer" aria-hidden="true">
+  <button class="close" id="closeDrawer" data-a="close" aria-label="Close">×</button>
+  <div id="drawerBody"></div>
+</aside>
+
+<script type="module" src="app.js?v=9"></script>
+</body>
+</html>
