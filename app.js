@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STR, LANGS, pickLang } from './i18n.js?v=9';
+import { STR, LANGS, pickLang } from './i18n.js?v=10';
+import { initTour } from './tours.js?v=1';
 
 const $ = s => document.querySelector(s);
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -10,7 +11,7 @@ const SCALE = 10;
 const lang = pickLang(), T = { ...STR.en, ...STR[lang] };
 document.documentElement.lang = lang;
 const year = y => y < 0 ? `${T.circa} ${-y} ${T.bce}` : y < 1500 ? `${T.circa} ${y} ${T.ce}` : `${y}`;
-const path = k => k.split('.').reduce((o, p) => o[p], T);
+const path = k => k.split('.').reduce((o, p) => o?.[p], T);
 document.querySelectorAll('[data-t]').forEach(el => { el.textContent = path(el.dataset.t); });
 document.querySelectorAll('[data-th]').forEach(el => { el.innerHTML = path(el.dataset.th); });
 $('#h1').innerHTML = `${esc(T.h1[0])}<br>${esc(T.h1[1])} <em>${esc(T.h1[2])}</em>`;
@@ -608,3 +609,4 @@ function tick(t) {
   }
 }
 requestAnimationFrame(tick);
+initTour({ lang, T, LANGS, path, ready: true });

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
@@ -19,7 +19,10 @@
 
 <nav class="top" id="topNav">
   <a href="#ask" class="brand">The Long Conversation</a>
-  <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" data-a="menu" aria-label="Menu">☰</button>
+  <div class="top-acts">
+    <button type="button" class="tour-btn" id="tourBtn" data-a="tour" aria-label="Tour">?</button>
+    <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" data-a="menu" aria-label="Menu">☰</button>
+  </div>
   <div class="links" id="navLinks">
     <a href="#ask" data-t="nav.0">Ask</a><a href="#map" data-t="nav.1">Map</a><a href="#disagree" data-t="nav.2">Disagreements</a><a href="#library" data-t="nav.3">Library</a>
     <select id="lang" data-a="lang" aria-label="Language"></select>
@@ -100,7 +103,7 @@
   <div id="drawerBody"></div>
 </aside>
 
-<script type="module" src="app.js?v=14"></script>
+<script type="module" src="app.js?v=15"></script>
 <script data-goatcounter="https://thelongconversation.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
