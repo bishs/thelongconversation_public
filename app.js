@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STR, LANGS, pickLang } from './i18n.js?v=8';
+import { STR, LANGS, pickLang } from './i18n.js?v=9';
 
 const $ = s => document.querySelector(s);
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -18,6 +18,22 @@ $('#q').placeholder = T.placeholder;
 document.querySelectorAll('[data-a]').forEach(el => { el.setAttribute('aria-label', T.aria[el.dataset.a]); });
 $('#lang').innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}"${k === lang ? ' selected' : ''}>${v}</option>`).join('');
 $('#lang').addEventListener('change', e => { try { localStorage.setItem('lang', e.target.value); } catch {} const u = new URL(location.href); u.searchParams.set('lang', e.target.value); u.hash = ''; location.href = u; });
+
+const topNav = $('#topNav'), menuBtn = $('#menuBtn');
+function closeMenu() {
+  if (!topNav.classList.contains('open')) return;
+  topNav.classList.remove('open');
+  menuBtn.setAttribute('aria-expanded', 'false');
+  menuBtn.textContent = '☰';
+}
+menuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const open = topNav.classList.toggle('open');
+  menuBtn.setAttribute('aria-expanded', String(open));
+  menuBtn.textContent = open ? '×' : '☰';
+});
+$('#navLinks').addEventListener('click', e => { if (e.target.closest('a')) closeMenu(); });
+document.addEventListener('click', e => { if (!e.target.closest('#topNav')) closeMenu(); });
 
 // ───────────── data ─────────────
 const status = $('#status');
@@ -312,7 +328,7 @@ function openDrawer(i) {
   select(i);
 }
 $('#closeDrawer').addEventListener('click', () => { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); });
-addEventListener('keydown', e => { if (e.key === 'Escape') $('#closeDrawer').click(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') { $('#closeDrawer').click(); closeMenu(); } });
 
 // ───────────── disagreements ─────────────
 const debTitle = di => (T.debates && T.debates[di][0]) || extra.debates[di].title;
@@ -339,10 +355,13 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: fals
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setClearColor(0x090b12);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
-const HOME = new THREE.Vector3(5, 2.2, 17).multiplyScalar(innerWidth < 800 ? 1.35 : 1); camera.position.copy(HOME);
+const homeVec = () => new THREE.Vector3(5, 2.2, 17).multiplyScalar(innerWidth < 800 ? 1.35 : 1);
+const HOME = homeVec(); camera.position.copy(HOME);
 const controls = new OrbitControls(camera, canvas);
-Object.assign(controls, { enableZoom: false, enablePan: false, enableDamping: true, dampingFactor: 0.06, rotateSpeed: 0.5, autoRotate: true, autoRotateSpeed: 0.35 });
-controls.touches.ONE = null; // one finger scrolls the page; two fingers turn the map
+Object.assign(controls, { enableZoom: false, enablePan: false, enableDamping: true, dampingFactor: 0.06, rotateSpeed: 0.5, autoRotate: true, autoRotateSpeed: 0.35, minDistance: 2.5, maxDistance: 40 });
+controls.touches.ONE = THREE.TOUCH.ROTATE;
+controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+canvas.style.touchAction = 'pan-y'; // 1-finger vertical swipe scrolls the page; horizontal drag or 2 fingers turn/pinch-zoom the map
 
 const geo = new THREE.BufferGeometry();
 const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), size = new Float32Array(N), hi = new Float32Array(N), vis = new Float32Array(N).fill(1);
@@ -406,17 +425,20 @@ function select(i) { ring.position.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2
 // camera moves
 let fly = null, dist = HOME.length();
 function flyTo(i) {
-  const p = new THREE.Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
-  fly = { target: p, dist: 7 }; controls.autoRotate = false;
+  const mob = innerWidth <= 720;
+  const p = new THREE.Vector3(pos[i * 3], pos[i * 3 + 1] - (mob ? 1.1 : 0), pos[i * 3 + 2]);
+  fly = { target: p, dist: mob ? 9 : 7 }; controls.autoRotate = false;
 }
 $('#zin').onclick = () => { fly = { target: controls.target.clone(), dist: Math.max(2.5, dist * 0.65) }; };
 $('#zout').onclick = () => { fly = { target: controls.target.clone(), dist: Math.min(40, dist / 0.65) }; };
-$('#zreset').onclick = () => { fly = { target: new THREE.Vector3(), dist: HOME.length() }; controls.autoRotate = true; clearHighlight(); };
-canvas.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); fly = { target: controls.target.clone(), dist: Math.min(40, Math.max(2.5, dist * (e.deltaY > 0 ? 1.15 : 0.87))) }; }, { passive: false });
+$('#zreset').onclick = () => { fly = { target: new THREE.Vector3(), dist: homeVec().length() }; controls.autoRotate = true; clearHighlight(); };
+canvas.addEventListener('touchstart', () => { controls.enableZoom = true; }, { passive: true });
+canvas.addEventListener('wheel', e => { controls.enableZoom = false; if (!e.ctrlKey) return; e.preventDefault(); fly = { target: controls.target.clone(), dist: Math.min(40, Math.max(2.5, dist * (e.deltaY > 0 ? 1.15 : 0.87))) }; }, { passive: false });
 controls.addEventListener('start', () => { controls.autoRotate = false; fly = null; });
 
 // legend
 const off = new Set();
+let legFolded = false;
 function syncMapGroups() {
   for (let i = 0; i < N; i++) {
     const c = colorMode === 'age' ? ec[eraOf(i)] : tc[tradOf(i)];
@@ -431,11 +453,20 @@ function renderLegend() {
     ? ERAS.map((e, i) => ({ color: e.color, label: T.eras[i] }))
     : trads.map((t, i) => ({ color: t.color, label: tradName(i) }));
   const allOff = off.size >= items.length;
-  $('#legend').innerHTML = `<div class="leg-bar"><div class="leg-mode"><span>${esc(T.color_by)}:</span><button type="button" data-mode="trad" class="${colorMode === 'trad' ? 'on' : ''}">${esc(T.by_trad)}</button><button type="button" data-mode="age" class="${colorMode === 'age' ? 'on' : ''}">${esc(T.by_age)}</button></div><button type="button" class="leg-all" data-all>${esc(allOff ? T.all_on : T.all_off)}</button></div>` +
-    items.map((it, i) => `<button type="button" style="--c:${it.color}" data-t="${i}" class="${off.has(i) ? 'off' : ''}"><i></i>${esc(it.label)}</button>`).join('');
+  $('#legend').innerHTML = `<div class="leg-bar"><div class="leg-mode"><span>${esc(T.color_by)}:</span><button type="button" data-mode="trad" class="${colorMode === 'trad' ? 'on' : ''}">${esc(T.by_trad)}</button><button type="button" data-mode="age" class="${colorMode === 'age' ? 'on' : ''}">${esc(T.by_age)}</button></div><button type="button" class="leg-all" data-all>${esc(allOff ? T.all_on : T.all_off)}</button><button type="button" class="ex-fold leg-fold" data-leg-fold aria-expanded="${!legFolded}" aria-label="${esc(T.aria.close)}">${legFolded ? '+' : '−'}</button></div>` +
+    `<div class="leg-items"${legFolded ? ' hidden' : ''}>` + items.map((it, i) => `<button type="button" style="--c:${it.color}" data-t="${i}" class="${off.has(i) ? 'off' : ''}"><i></i>${esc(it.label)}</button>`).join('') + `</div>`;
 }
 renderLegend();
 $('#legend').addEventListener('click', e => {
+  const foldBtn = e.target.closest('[data-leg-fold]');
+  if (foldBtn) {
+    legFolded = !legFolded;
+    const itemsEl = $('#legend .leg-items');
+    if (itemsEl) itemsEl.hidden = legFolded;
+    foldBtn.textContent = legFolded ? '+' : '−';
+    foldBtn.setAttribute('aria-expanded', String(!legFolded));
+    return;
+  }
   const modeBtn = e.target.closest('[data-mode]');
   if (modeBtn) {
     if (modeBtn.dataset.mode === colorMode) return;
@@ -473,10 +504,10 @@ const labelPos = extra.themes.map(t => new THREE.Vector3(...t.pos).multiplyScala
 const tip = $('#tip'), snapEl = $('#snap');
 let mouse = null, hover = -1, downAt = null, dragged = false, pickX = 0, pickY = 0, snapped = false;
 const m4 = new THREE.Matrix4();
-function pick(mx, my) {
+function pick(mx, my, touch = false) {
   m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); const e = m4.elements, w = innerWidth, h = innerHeight;
-  const net = dimTarget > 0.1;
-  let best = -1, bd = net ? 48 * 48 : 14 * 14, bestTier = 0, bx = mx, by = my;
+  const net = dimTarget > 0.1, baseR = touch ? 22 * 22 : 14 * 14;
+  let best = -1, bd = net ? 48 * 48 : baseR, bestTier = 0, bx = mx, by = my;
   for (let i = 0; i < N; i++) {
     if (!vis[i]) continue;
     const hVal = hi[i];
@@ -487,7 +518,7 @@ function pick(mx, my) {
     const px = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / cw * 0.5 + 0.5) * w;
     const py = (0.5 - (e[1] * x + e[5] * y + e[9] * z + e[13]) / cw * 0.5) * h;
     const sx = px - mx, sy = py - my, d = sx * sx + sy * sy;
-    const maxD = tier === 2 ? 48 * 48 : tier === 1 ? 28 * 28 : 14 * 14;
+    const maxD = tier === 2 ? 48 * 48 : tier === 1 ? 28 * 28 : baseR;
     if (d > maxD) continue;
     if (tier > bestTier || d < bd) { bestTier = tier; bd = d; best = i; bx = px; by = py; }
   }
@@ -495,16 +526,20 @@ function pick(mx, my) {
   return best;
 }
 canvas.addEventListener('pointermove', e => {
-  mouse = [e.clientX, e.clientY];
-  if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) dragged = true;
+  if (e.pointerType !== 'touch') mouse = [e.clientX, e.clientY];
+  const slop = e.pointerType === 'touch' ? 12 : 5;
+  if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > slop) dragged = true;
 });
 canvas.addEventListener('pointerleave', () => { mouse = null; snapped = false; snapEl.hidden = true; tip.hidden = true; hover = -1; });
+canvas.addEventListener('pointercancel', () => { downAt = null; dragged = false; mouse = null; snapped = false; snapEl.hidden = true; tip.hidden = true; hover = -1; });
 canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; dragged = false; snapped = false; snapEl.hidden = true; tip.hidden = true; hover = -1; });
 canvas.addEventListener('pointerup', e => {
-  const wasTap = downAt && !dragged && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) <= 5;
+  const isTouch = e.pointerType === 'touch', slop = isTouch ? 12 : 5;
+  const wasTap = downAt && !dragged && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) <= slop;
   downAt = null; dragged = false;
+  if (isTouch) { mouse = null; snapped = false; snapEl.hidden = true; tip.hidden = true; hover = -1; }
   if (!wasTap) return;
-  const i = pick(e.clientX, e.clientY); if (i >= 0) { openDrawer(i); flyTo(i); }
+  const i = pick(e.clientX, e.clientY, isTouch); if (i >= 0) { openDrawer(i); flyTo(i); }
 });
 
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); mat.uniforms.uPx.value = innerHeight * 0.17 * renderer.getPixelRatio(); }
@@ -531,7 +566,7 @@ function tick(t) {
   labelsEl.classList.toggle('on', inMap && !drawer.classList.contains('open'));
   if (inMap && frame % 2 === 0) {
     // nearest labels first; a label that would cover another one stays hidden
-    const cand = [];
+    const cand = [], mob = innerWidth <= 720, topPad = mob ? 145 : 65, botPad = mob ? (legFolded ? 70 : 155) : 50;
     for (let i = 0; i < labelEls.length; i++) {
       v3.copy(labelPos[i]).project(camera);
       if (v3.z > 1) { labelEls[i].style.display = 'none'; continue; }
@@ -540,6 +575,7 @@ function tick(t) {
     cand.sort((a, b) => a.d - b.d); const placed = [];
     for (const c of cand) {
       const el = labelEls[c.i];
+      if (c.x < c.w * 0.45 + 6 || c.x > innerWidth - c.w * 0.45 - 6 || c.y < topPad || c.y > innerHeight - botPad) { el.style.display = 'none'; continue; }
       if (placed.some(p => Math.abs(p.x - c.x) < (p.w + c.w) / 2 && Math.abs(p.y - c.y) < 30)) { el.style.display = 'none'; continue; }
       placed.push(c); el.style.display = ''; el.style.left = c.x + 'px'; el.style.top = c.y + 'px';
       el.style.opacity = Math.max(0.35, Math.min(1, 1.7 - c.d / 22));
