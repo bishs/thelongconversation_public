@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STR, LANGS, pickLang } from './i18n.js?v=10';
+import { STR, LANGS, pickLang } from './i18n.js?v=11';
 import { initTour } from './tours.js?v=1';
 
 const $ = s => document.querySelector(s);
@@ -378,25 +378,30 @@ geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
 geo.setAttribute('aHi', new THREE.BufferAttribute(hi, 1));
 geo.setAttribute('aVis', new THREE.BufferAttribute(vis, 1));
 const mat = new THREE.ShaderMaterial({
-  uniforms: { uPx: { value: 1 }, uDim: { value: 0 }, uTime: { value: 0 } },
-  vertexShader: `attribute vec3 color; attribute float aSize, aHi, aVis; uniform float uPx, uDim, uTime; varying vec3 vC; varying float vA;
+  uniforms: { uPx: { value: 1 }, uDim: { value: 0 }, uTime: { value: 0 }, uLight: { value: 0 } },
+  vertexShader: `attribute vec3 color; attribute float aSize, aHi, aVis; uniform float uPx, uDim, uTime, uLight; varying vec3 vC; varying float vA;
     void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
       float tw = 0.82 + 0.18 * sin(uTime * 1.3 + position.x * 37.0 + position.y * 17.0);
       gl_PointSize = uPx * aSize * mix(1.0, 3.4, aHi) * tw / -mv.z;
-      vC = mix(color, vec3(1.0, 0.96, 0.84), aHi * 0.45);
+      vec3 cDark = mix(color, vec3(1.0, 0.96, 0.84), aHi * 0.45);
+      vC = mix(cDark, color * mix(0.75, 0.5, aHi), uLight);
       vA = aVis * mix(mix(0.85, 0.13, uDim), 1.6, aHi); }`,
-  fragmentShader: `varying vec3 vC; varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); a = a * a * (0.6 + 0.4 * a) + smoothstep(0.12, 0.0, d) * 0.6; gl_FragColor = vec4(vC * a * vA, 1.0); }`,
+  fragmentShader: `uniform float uLight; varying vec3 vC; varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); a = a * a * (0.6 + 0.4 * a) + smoothstep(0.12, 0.0, d) * 0.6;
+    vec4 darkCol = vec4(vC * a * vA, 1.0);
+    vec4 lightCol = vec4(vC, min(1.0, a * vA * 1.15));
+    gl_FragColor = mix(darkCol, lightCol, uLight); }`,
   blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true,
 });
 scene.add(new THREE.Points(geo, mat));
 
 // far background dust
+const dustMat = new THREE.PointsMaterial({ color: 0x5a6078, size: 0.16, sizeAttenuation: true, transparent: true, opacity: 0.7, depthTest: false });
 {
   const n = 1800, p = new Float32Array(n * 3); let s = 7;
   const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < n; i++) { const r = 45 + rnd() * 50, a = rnd() * 6.283, z = rnd() * 2 - 1, q = Math.sqrt(1 - z * z); p.set([r * q * Math.cos(a), r * z, r * q * Math.sin(a)], i * 3); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x5a6078, size: 0.16, sizeAttenuation: true, transparent: true, opacity: 0.7, depthTest: false })));
+  scene.add(new THREE.Points(g, dustMat));
 }
 // threads between the passages of one answer
 const threadGeo = new THREE.BufferGeometry();
@@ -405,8 +410,36 @@ const threads = new THREE.LineSegments(threadGeo, threadMat);
 threads.frustumCulled = false; // prevent stale empty boundingSphere from culling rotated networks
 scene.add(threads);
 // ring around the selected passage
-const ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.23, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide });
+const ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.23, 48), ringMat);
 ring.visible = false; ring.frustumCulled = false; scene.add(ring);
+
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  document.documentElement.dataset.theme = isLight ? 'light' : 'dark';
+  const btn = $('#themeBtn');
+  if (btn) btn.setAttribute('aria-pressed', String(isLight));
+  const meta = $('#themeColor');
+  if (meta) meta.setAttribute('content', isLight ? '#f6f1e6' : '#090b12');
+  renderer.setClearColor(isLight ? 0xf6f1e6 : 0x090b12);
+  mat.uniforms.uLight.value = isLight ? 1 : 0;
+  mat.blending = isLight ? THREE.NormalBlending : THREE.AdditiveBlending;
+  mat.needsUpdate = true;
+  dustMat.color.setHex(isLight ? 0x9c907d : 0x5a6078);
+  dustMat.opacity = isLight ? 0.45 : 0.7;
+  threadMat.color.setHex(isLight ? 0x9e6b1b : 0xe8b86d);
+  threadMat.blending = isLight ? THREE.NormalBlending : THREE.AdditiveBlending;
+  threadMat.opacity = isLight ? 0.45 : 0.55;
+  threadMat.needsUpdate = true;
+  ringMat.color.setHex(isLight ? 0x1e1a14 : 0xffffff);
+}
+let currentTheme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+applyTheme(currentTheme);
+$('#themeBtn')?.addEventListener('click', () => {
+  currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+  try { localStorage.setItem('theme', currentTheme); } catch {}
+  applyTheme(currentTheme);
+});
 
 let dimTarget = 0;
 function highlight(glow, strong) {

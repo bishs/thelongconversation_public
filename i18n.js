@@ -37,7 +37,7 @@ const en = {
   translated_by: 'translated by', Translated_by: 'Translated by', echoes: 'Echoes in other traditions', onmap: 'On the map', source: 'Source',
   readfull: 'Read the full text', other_peoples: 'Other peoples, other centuries, a similar thought.', another: 'Another passage →', passages: 'passages',
   explain: 'Explain in plain words', ex_label: 'A modern explanation. These are not the author’s words.', ex_loading: 'Loading…', ex_fail: 'The explanation is not available.', ex_mt: '', ex_original: '',
-  aria: { lang: 'Language', q: 'What troubles you?', zin: 'Zoom in', zout: 'Zoom out', zreset: 'Reset the view', close: 'Close', menu: 'Menu', tour: 'Tour' },
+  aria: { lang: 'Language', q: 'What troubles you?', zin: 'Zoom in', zout: 'Zoom out', zreset: 'Reset the view', close: 'Close', menu: 'Menu', tour: 'Tour', theme: 'Switch light or dark theme' },
   tour: {
     step: (n, m) => `Step ${n} of ${m}`,
     back: 'Back', next: 'Next', done: 'Done',
@@ -97,7 +97,7 @@ const es = {
   translated_by: 'traducción inglesa de', Translated_by: 'Traducción inglesa de', echoes: 'Ecos en otras tradiciones', onmap: 'En el mapa', source: 'Fuente',
   readfull: 'Leer el texto completo', other_peoples: 'Otros pueblos, otros siglos, un pensamiento parecido.', another: 'Otro pasaje →', passages: 'pasajes',
   explain: 'Explicar con palabras sencillas', ex_label: 'Explicación moderna. No son palabras del autor.', ex_loading: 'Cargando…', ex_fail: 'La explicación no está disponible.', ex_mt: 'Traducción automática de la explicación en inglés. Puede contener errores.', ex_original: 'Explicación en inglés',
-  aria: { lang: 'Idioma', q: '¿Qué te preocupa?', zin: 'Acercar', zout: 'Alejar', zreset: 'Restablecer la vista', close: 'Cerrar', menu: 'Menú', tour: 'Guía' },
+  aria: { lang: 'Idioma', q: '¿Qué te preocupa?', zin: 'Acercar', zout: 'Alejar', zreset: 'Restablecer la vista', close: 'Cerrar', menu: 'Menú', tour: 'Guía', theme: 'Cambiar entre tema claro y oscuro' },
   tour: {
     step: (n, m) => `Paso ${n} de ${m}`,
     back: 'Atrás', next: 'Siguiente', done: 'Listo',
@@ -167,7 +167,7 @@ const fr = {
   translated_by: 'traduction anglaise de', Translated_by: 'Traduction anglaise de', echoes: 'Échos dans d’autres traditions', onmap: 'Sur la carte', source: 'Source',
   readfull: 'Lire le texte complet', other_peoples: 'D’autres peuples, d’autres siècles, une pensée proche.', another: 'Un autre passage →', passages: 'passages',
   explain: 'Expliquer en mots simples', ex_label: 'Explication moderne. Ce ne sont pas les mots de l’auteur.', ex_loading: 'Chargement…', ex_fail: 'L’explication n’est pas disponible.', ex_mt: 'Traduction automatique de l’explication anglaise. Elle peut contenir des erreurs.', ex_original: 'Explication en anglais',
-  aria: { lang: 'Langue', q: 'Qu’est-ce qui vous trouble ?', zin: 'Zoom avant', zout: 'Zoom arrière', zreset: 'Réinitialiser la vue', close: 'Fermer', menu: 'Menu', tour: 'Visite guidée' },
+  aria: { lang: 'Langue', q: 'Qu’est-ce qui vous trouble ?', zin: 'Zoom avant', zout: 'Zoom arrière', zreset: 'Réinitialiser la vue', close: 'Fermer', menu: 'Menu', tour: 'Visite guidée', theme: 'Basculer entre le thème clair et sombre' },
   tour: {
     step: (n, m) => `Étape ${n} sur ${m}`,
     back: 'Retour', next: 'Suivant', done: 'Terminer',
@@ -237,7 +237,7 @@ const de = {
   translated_by: 'englische Übersetzung von', Translated_by: 'Englische Übersetzung von', echoes: 'Echos in anderen Traditionen', onmap: 'Auf der Karte', source: 'Quelle',
   readfull: 'Den ganzen Text lesen', other_peoples: 'Andere Völker, andere Jahrhunderte, ein ähnlicher Gedanke.', another: 'Eine andere Textstelle →', passages: 'Textstellen',
   explain: 'In einfachen Worten erklären', ex_label: 'Moderne Erklärung. Dies sind nicht die Worte des Autors.', ex_loading: 'Wird geladen…', ex_fail: 'Die Erklärung ist nicht verfügbar.', ex_mt: 'Maschinelle Übersetzung der englischen Erklärung. Sie kann Fehler enthalten.', ex_original: 'Englische Erklärung',
-  aria: { lang: 'Sprache', q: 'Was bedrückt dich?', zin: 'Vergrößern', zout: 'Verkleinern', zreset: 'Ansicht zurücksetzen', close: 'Schließen', menu: 'Menü', tour: 'Rundgang' },
+  aria: { lang: 'Sprache', q: 'Was bedrückt dich?', zin: 'Vergrößern', zout: 'Verkleinern', zreset: 'Ansicht zurücksetzen', close: 'Schließen', menu: 'Menü', tour: 'Rundgang', theme: 'Zwischen hellem und dunklem Design wechseln' },
   tour: {
     step: (n, m) => `Schritt ${n} von ${m}`,
     back: 'Zurück', next: 'Weiter', done: 'Fertig',

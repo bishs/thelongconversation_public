@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Long Conversation</title>
 <meta name="description" content="Bring a trouble. Hear what 2,500 years of human thought said about it, in real words with sources.">
+<meta name="theme-color" content="#090b12" id="themeColor">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>try{const t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch{}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=12">
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
@@ -20,6 +23,7 @@
 <nav class="top" id="topNav">
   <a href="#ask" class="brand">The Long Conversation</a>
   <div class="top-acts">
+    <button type="button" class="tour-btn theme-btn" id="themeBtn" data-a="theme" aria-label="Switch light or dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg><svg class="i-moon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg></button>
     <button type="button" class="tour-btn" id="tourBtn" data-a="tour" aria-label="Tour">?</button>
     <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="navLinks" data-a="menu" aria-label="Menu">☰</button>
   </div>
@@ -103,7 +107,7 @@
   <div id="drawerBody"></div>
 </aside>
 
-<script type="module" src="app.js?v=15"></script>
+<script type="module" src="app.js?v=16"></script>
 <script data-goatcounter="https://thelongconversation.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
